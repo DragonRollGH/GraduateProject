@@ -2,14 +2,14 @@
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
 
-const unsigned int Min = 50;
-const unsigned int Max = 300;
+const int Min = 50;
+const int Max = 300;
 
 WiFiClient WC;
 PubSubClient MQTT(WC);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Pixel(24);
 
-byte adj = 12;
+int adj = 12;
 
 void MQTTConnect(void)
 {
@@ -25,14 +25,11 @@ void MQTTCallback(const char *topic, byte *payload, unsigned int length)
   Serial.print("] ");
   Serial.println();
 
-  if (length == 1)
-  {
-    adj = payload[0] - 'A';
-  }
+  adj = payload[0] - 'A';
 }
 
 
-unsigned int limit(unsigned int x, unsigned int min, unsigned int max)
+int limit(int x, int min, int max)
 {
   x = x > max ? max : x;
   x = x < min ? min : x;
@@ -65,10 +62,10 @@ void loop()
   }
   MQTT.loop();
 
-  unsigned int Sensor = analogRead(A0);
-  Sensor = limit(Sensor, Min, Max);
-  char Light = (Sensor - Min) * 24 / (Max - Min);
-  Light = Light - 12 + adj;
+  int Sensor = analogRead(A0);
+  int Light = (Sensor - Min) * 24 / (Max - Min);
+  Light += adj - 12;
+  Light = limit(Light, 0, 24);
   Pixel.ClearTo(RgbColor(0, 0, 0));
   for (byte i = 0; i < Light; i++)
   {
