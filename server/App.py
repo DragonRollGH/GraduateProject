@@ -1,8 +1,6 @@
 from flask import Flask, redirect, url_for, request
-from Light import Light
 
 app = Flask(__name__, static_url_path='')
-light = Light()
 
 
 @app.route("/")
@@ -12,11 +10,9 @@ def index():
 
 @app.route("/api")
 def api():
-    value = request.values
-    light.adjBrightness(int(value))
-    return str(light.brightness)
-
-
+    values = request.values
+    iot.api(values)
+    return values
 
 if __name__ == '__main__':
     app.debug = True

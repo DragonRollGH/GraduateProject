@@ -1,0 +1,43 @@
+<html>
+
+<head>
+    <title>Brightness</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" charset="utf-8" />
+    <link rel="stylesheet" href="https://bootswatch.com/4/cerulean/bootstrap.min.css">
+    <style>
+        /* h1, p, div {
+            text-align: center;
+        } */
+    </style>
+    <script src="index.js"></script>
+</head>
+
+<body>
+    <div style="text-align: center;">
+        <h1 id="Light" style="color: gray;">Light</h1>
+        <div style="position: absolute; left: 0; right: 0;">
+            <img src="Light.png" width="300" onclick="toggleLight()"/>
+        </div>
+        <canvas id="Canvas" width="300" height="300"></canvas>
+        <div style="display: flex; justify-content: center">
+            <span>亮度：</span>
+            <span id="optBrightness">90%&ensp;</span>
+            <input class="custom-range" type="range" id="iptBrightness" onchange="adjBrightness(this.value)" value=90 style="width: 300px;">
+        </div>
+        <br><hr><br>
+        <div style="display: flex; justify-content: center">
+            <span>光照：</span>
+            <span id="optLight">70%&ensp;</span>
+            <input class="custom-range" type="range" id="iptLight" onchange="adjLight(this.value)" value=70 style="width: 300px;">
+        </div>
+        <br>
+        <div style="display: flex; justify-content: center">
+            <span>时间：</span>
+            <span id="optHour">12:00&ensp;</span>
+            <input class="custom-range" type="range" onchange="adjHour(this.value)" value=12 min=0 max=23 style="width: 300px;">
+        </div>
+    </div>
+    <!-- <script src="index.js"></script> -->
+</body>
+
+</html>
