@@ -11,7 +11,7 @@ def index():
 @app.route("/api")
 def api():
     values = request.values
-    iot.api(values)
+    # iot.api(values)
     return values
 
 if __name__ == '__main__':
