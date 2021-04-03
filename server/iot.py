@@ -1,40 +1,34 @@
-class Light:
+import paho.mqtt.client as MQTT
+
+
+class IoT:
     def __init__(self):
-        self.brightness = 0
-        self.snsHour = 12
-        self.snsLight = 70
-        self.brnSleep = 10
-        self.brnTotal = 90
+        mqtt = MQTT.Client('IoT')
+        mqtt.connect("192.168.1.110")
+        self.device = {
+            'light': Light(mqtt)
+        }
 
-    def adjBrightness(self, value):
-        self.brnTotal = value
-        self.updateBrightness()
+    def api(self, form):
+        device = self.device.get(form.get('d'))
+        if device:
+            method = device.method.get(form.get('m'))
+            if method:
+                args = form.get('a')
+                if args != None:
+                    method(args)
 
-    def adjLight(self, value):
-        self.snsLight = value
-        if not self.isManSleep():
-            self.updateBrightness()
 
-    def adjHour(self, value):
-        self.snsHour = value
+class Light:
+    def __init__(self, mqtt):
+        self.mqtt = mqtt
+        self.method = {
+            'offset': self.offset
+        }
+        self.power = 0
+        self.value = 0
 
-    def onLight(self):
-        self.updateSensors()
-        if self.isManSleep():
-            self.brightness = self.brnSleep
-        else:
-            self.updateBrightness()
-
-    def updateSensors(self):
-        pass
-
-    def updateBrightness(self):
-        self.brightness = self.brnTotal - self.snsLight
-        if self.brightness < 0:
-            self.brightness = 0
-
-    def isManSleep(self):
-        if 0 <= self.snsHour <= 8:
-            return True
-        else:
-            return False
+    def offset(self, value):
+        print(value)
+        print("**********************")
+        self.mqtt.publish('Light', value)

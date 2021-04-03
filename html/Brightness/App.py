@@ -13,7 +13,7 @@ def index():
 @app.route("/adjBrightness")
 def adjBrightness():
     value = request.args.get('v')
-    light.adjBrightness(int(value))
+    light.adjBrightness(int(value)) 
     return str(light.brightness)
 
 
