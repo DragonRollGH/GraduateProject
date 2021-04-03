@@ -1,0 +1,23 @@
+<html>
+
+<head>
+    <title>Light</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" charset="utf-8" />
+    <link rel="stylesheet" href="https://bootswatch.com/4/cerulean/bootstrap.min.css">
+    <script src="light.js"></script>
+</head>
+
+<body>
+    <div style="text-align: center;">
+        <h1 id="Light" style="color: gray;">Light</h1>
+        <div style="position: absolute; left: 0; right: 0;">
+            <img src="light.png" width="300" onclick="toggle()"/>
+        </div>
+        <canvas id="Canvas" width="300" height="300"></canvas>
+        <div>
+            <input class="custom-range" type="range" onchange="offset(this.value)" min= 0 max=24 value=12 style="width: 300px;">
+        </div>
+    </div>
+</body>
+
+</html>
