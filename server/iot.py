@@ -7,7 +7,7 @@ class IoT:
         self.mqtt = MQTT.Client('IoT_'+str(random.randint(10,99)))
         self.mqtt.connect("192.168.1.110")
         self.mqtt.subscribe('IoT')
-        self.mqtt.on_message = self.on_message
+        self.mqtt.on_message = self.mqttMsg
         self.mqtt.loop_start()
 
         self.device = {
@@ -18,7 +18,7 @@ class IoT:
             'lightsensor': Lightsensor(self)
         }
 
-    def on_message(self, client, userdata, msg):
+    def mqttMsg(self, client, userdata, msg):
         print('[{}] {}'.format(msg.topic, msg.payload))
         sensor = self.sensor.get(msg.topic)
         if sensor:
@@ -66,7 +66,7 @@ class Light:
 
     def sensor(self, value):
         MIN = 50
-        MAX = 500
+        MAX = 400
         value = MIN if value < MIN else value
         value = MAX if value > MAX else value
         self.value = round((value - MIN) * 24 / (MAX - MIN))
