@@ -14,7 +14,9 @@ class IoT:
         }
 
     def on_message(self, client, userdata, msg):
-
+        sensor = self.sensor.get(msg.topic)
+        if sensor:
+            sensor.update(msg.payload)
 
     def api(self, form):
         device = self.device.get(form.get('d'))
@@ -54,12 +56,21 @@ class Light:
         self.iot.mqtt.publish('light', str(value))
 
     def toggle(self, value):
-        self.power = value
+        self.power = int(value)
         self.publish()
 
     def offset(self, value):
-        self.offsetx = value
+        self.offsetx = int(value)
         self.publish()
+
+    def sensor(self, value):
+        MIN = 50
+        MAX = 500
+        value = MIN if value < MIN else value
+        value = MAX if value > MAX else value
+        self.value = round((value - MIN) * 24 / (MAX - MIN))
+        self.publish()
+
 
 class Lightsensor:
     def __init__(self, iot):
@@ -67,4 +78,6 @@ class Lightsensor:
         self.value = 0
         self.iot.mqtt.subcribe('lightsensor')
 
-    def
+    def update(self, value):
+        self.value = int(value)
+        self.iot.device['light'].sensor(value)
