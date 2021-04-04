@@ -15,7 +15,7 @@ class IoT:
         }
 
         self.sensor = {
-            'lightsensor': Lightsensor(self)
+            'sensorlight': SensorLight(self)
         }
 
     def mqttMsg(self, client, userdata, msg):
@@ -73,12 +73,16 @@ class Light:
         self.publish()
 
 
-class Lightsensor:
+class Curtain:
+    pass
+
+class Sensorlight:
     def __init__(self, iot):
         self.iot = iot
         self.value = 0
-        self.iot.mqtt.subscribe('lightsensor')
+        self.iot.mqtt.subscribe('sensorlight')
 
     def update(self, value):
         self.value = int(value)
         self.iot.device['light'].sensor(self.value)
+
