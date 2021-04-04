@@ -88,6 +88,9 @@ class Curtain:
         if self.power is 0:
             self.iot.mqtt.publish('curtain', '0')
             print('[curtain] 0')
+        elif self.power is 2:
+            self.iot.mqtt.publish('curtain', '2')
+            print('[curtain] 2')
         else:
             value = self.value + self.offsetx - 12
             value = 0 if value < 0 else value
@@ -110,6 +113,7 @@ class Curtain:
         value = MAX if value > MAX else value
         self.value = round((value - MIN) * 24 / (MAX - MIN))
         self.publish()
+
 
 class SensorLight:
     def __init__(self, iot):
