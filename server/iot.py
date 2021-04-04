@@ -13,11 +13,18 @@ class IoT:
         self.device = {
             'light': Light(self),
             'curtain': Curtain(self),
-            'window': Window(self)
+            'window': Window(self),
+            'fan': Fan(self),
+            'humidifier': Humidifier(self),
+            'rotator': Rotator(self)
         }
 
         self.sensor = {
-            'sensorlight': SensorLight(self)
+            'sensorlight': SensorLight(self),
+            'sensorRain': SensorRain(self),
+            'sensorTemperature': SensorTemperature(self),
+            'sensorHumidity': SensorHumidity(self),
+            'sensorBody': SensorBody(self)
         }
 
     def mqttMsg(self, client, userdata, msg):
@@ -34,6 +41,7 @@ class IoT:
                 args = form.get('a')
                 if args != None:
                     method(args)
+
 
 class Light:
     def __init__(self, iot):
