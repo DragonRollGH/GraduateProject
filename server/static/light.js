@@ -6,7 +6,7 @@ function toggle() {
     if (power) {
         document.getElementById("Light").style = "color: rgb(255,200,0);"
         ctx.fillRect(0, 0, 300, 300);
-        Request.open('GET', `http://127.0.0.1:5000/api?d=light&m=toggle&a=1`, true);
+        Request.open('GET', `/api?d=light&m=toggle&a=1`, true);
         Request.send();
     } else {
         document.getElementById("Light").style = "color: gray;"

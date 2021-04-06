@@ -10,12 +10,10 @@
 <body>
     <div style="text-align: center;">
         <h1 id="curtain" style="color: #2fa4e7;">Curtain</h1>
-        <div style="position: absolute; left: 0; right: 0;">
-            <img src="curtain.png" width="300" onclick="toggle()"/>
-        </div>
-        <canvas id="Canvas" width="300" height="300"></canvas>
+        <img src="curtain.png" width="300" onclick="toggle()"/>
+        <h3 id="power">Auto</h3>
         <div>
-            <input class="custom-range" type="range" onchange="offset(this.value)" min= 0 max=24 value=12 style="width: 300px;">
+            <input class="custom-range" type="range" onchange="offset(this.value)" min= 0 max=200 value=100 style="width: 300px;">
         </div>
     </div>
 </body>
