@@ -2,9 +2,15 @@ import paho.mqtt.client as MQTT
 import random
 
 
+def limit(value, MIN, MAX):
+    value = MIN if value < MIN else value
+    value = MAX if value > MAX else value
+    return value
+
+
 class IoT:
     def __init__(self):
-        self.mqtt = MQTT.Client('IoT_'+str(random.randint(10,99)))
+        self.mqtt = MQTT.Client('IoT_'+str(random.randint(10, 99)))
         self.mqtt.connect("192.168.1.110")
         self.mqtt.subscribe('IoT')
         self.mqtt.on_message = self.mqttMsg
@@ -50,18 +56,18 @@ class Light:
             'offset': self.offset,
             'toggle': self.toggle
         }
+        self.MAX = 24
         self.power = 1
-        self.value = 12
-        self.offsetx = 12
+        self.value = self.MAX / 2
+        self.offsetx = self.MAX
 
     def publish(self):
         if self.power is 0:
             self.iot.mqtt.publish('light', '0')
             print('[light] 0')
         else:
-            value = self.value + self.offsetx - 12
-            value = 0 if value < 0 else value
-            value = 24 if value > 24 else value
+            value = self.value + self.offsetx - self.MAX
+            value = limit(value, 0, self.MAX)
             self.iot.mqtt.publish('light', str(value))
             print('[light] ' + str(value))
 
@@ -76,10 +82,10 @@ class Light:
     def sensor(self, value):
         MIN = 50
         MAX = 400
-        value = MIN if value < MIN else value
-        value = MAX if value > MAX else value
-        self.value = round((value - MIN) * 24 / (MAX - MIN))
+        value = limit(value, MIN, MAX)
+        self.value = round((value - MIN) * self.MAX / (MAX - MIN))
         self.publish()
+
 
 class Curtain:
     def __init__(self, iot):
@@ -88,21 +94,21 @@ class Curtain:
             'offset': self.offset,
             'toggle': self.toggle
         }
+        self.MAX = 100
         self.power = 1
-        self.value = 12
-        self.offsetx = 12
+        self.value = self.MAX / 2
+        self.offsetx = self.MAX
 
     def publish(self):
         if self.power is 0:
             self.iot.mqtt.publish('curtain', '0')
             print('[curtain] 0')
         elif self.power is 2:
-            self.iot.mqtt.publish('curtain', '2')
-            print('[curtain] 2')
+            self.iot.mqtt.publish('curtain', str(self.MAX))
+            print('[curtain] '+ str(self.MAX))
         else:
-            value = self.value + self.offsetx - 12
-            value = 0 if value < 0 else value
-            value = 24 if value > 24 else value
+            value = self.value + self.offsetx - self.MAX
+            value = limit(value, 0, self.MAX)
             self.iot.mqtt.publish('curtain', str(value))
             print('[curtain] ' + str(value))
 
@@ -117,10 +123,10 @@ class Curtain:
     def sensor(self, value):
         MIN = 50
         MAX = 400
-        value = MIN if value < MIN else value
-        value = MAX if value > MAX else value
-        self.value = round((value - MIN) * 24 / (MAX - MIN))
+        value = limit(value, MIN, MAX)
+        self.value = round((value - MIN) * self.MAX / (MAX - MIN))
         self.publish()
+
 
 class Window:
     def __init__(self, iot):
@@ -163,6 +169,7 @@ class Window:
         self.value = round((value - MIN) * 24 / (MAX - MIN))
         self.publish()
 
+
 class Fan:
     def __init__(self, iot):
         self.iot = iot
@@ -204,7 +211,8 @@ class Fan:
         self.value = round((value - MIN) * 24 / (MAX - MIN))
         self.publish()
 
-class Humidifier :
+
+class Humidifier:
     def __init__(self, iot):
         self.iot = iot
         self.method = {
@@ -245,7 +253,8 @@ class Humidifier :
         self.value = round((value - MIN) * 24 / (MAX - MIN))
         self.publish()
 
-class Rotator :
+
+class Rotator:
     def __init__(self, iot):
         self.iot = iot
         self.method = {
@@ -285,6 +294,7 @@ class Rotator :
         value = MAX if value > MAX else value
         self.value = round((value - MIN) * 24 / (MAX - MIN))
         self.publish()
+
 
 class SensorLight:
     def __init__(self, iot):
@@ -297,6 +307,7 @@ class SensorLight:
         self.iot.device['light'].sensor(self.value)
         self.iot.device['curtain'].sensor(self.value)
 
+
 class SensorRain:
     def __init__(self, iot):
         self.iot = iot
@@ -307,6 +318,7 @@ class SensorRain:
         self.value = int(value)
         self.iot.device['light'].sensor(self.value)
         self.iot.device['curtain'].sensor(self.value)
+
 
 class SensorTemperature:
     def __init__(self, iot):
@@ -319,6 +331,7 @@ class SensorTemperature:
         self.iot.device['light'].sensor(self.value)
         self.iot.device['curtain'].sensor(self.value)
 
+
 class SensorHumidity:
     def __init__(self, iot):
         self.iot = iot
@@ -329,6 +342,7 @@ class SensorHumidity:
         self.value = int(value)
         self.iot.device['light'].sensor(self.value)
         self.iot.device['curtain'].sensor(self.value)
+
 
 class SensorBody:
     def __init__(self, iot):
