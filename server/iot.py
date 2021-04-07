@@ -94,7 +94,7 @@ class Curtain:
             'offset': self.offset,
             'toggle': self.toggle
         }
-        self.MAX = 100
+        self.MAX = 180
         self.power = 1
         self.value = self.MAX / 2
         self.offsetx = self.MAX
