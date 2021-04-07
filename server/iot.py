@@ -68,6 +68,7 @@ class Light:
         else:
             value = self.value + self.offsetx - self.MAX
             value = limit(value, 0, self.MAX)
+            value = int(value)
             self.iot.mqtt.publish('light', str(value))
             print('[light] ' + str(value))
 
@@ -109,6 +110,7 @@ class Curtain:
         else:
             value = self.value + self.offsetx - self.MAX
             value = limit(value, 0, self.MAX)
+            value = int(value)
             self.iot.mqtt.publish('curtain', str(value))
             print('[curtain] ' + str(value))
 

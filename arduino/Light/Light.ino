@@ -22,12 +22,13 @@ void mqttConnect(void)
     delay(500);
   }
   MQTT.subscribe("light");
+  MQTT.subscribe("curtain");
   Serial.println("MQTT connected");
 }
 
 void mqttMsg(String &topic, String &payload)
 {
-  Serial.println("Message arrived [ " + topic + "] " + payload);
+  Serial.println("Message arrived [" + topic + "] " + payload);
 
   if (topic == "light")
   {
@@ -62,6 +63,7 @@ void setCurtain(int value)
 {
   MG90.attach(pinServo);
   MG90.write(value);
+  delay(300);
   MG90.detach();
 }
 
@@ -89,7 +91,6 @@ void setup()
   Pixel.Begin();
 
   WiFi.mode(WIFI_STA);
-  WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
   WiFi.begin("iTongji-manul", "YOUYUAN4411");
 
   delay(1000);
