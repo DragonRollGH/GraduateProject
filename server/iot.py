@@ -137,23 +137,24 @@ class Window:
             'offset': self.offset,
             'toggle': self.toggle
         }
+        self.MAX = 180
         self.power = 1
-        self.value = 12
-        self.offsetx = 12
+        self.value = self.MAX / 2
+        self.offsetx = self.MAX
 
     def publish(self):
         if self.power is 0:
-            self.iot.mqtt.publish('window', '0')
-            print('[window] 0')
+            self.iot.mqtt.publish('curtain', '0')
+            print('[curtain] 0')
         elif self.power is 2:
-            self.iot.mqtt.publish('window', '2')
-            print('[window] 2')
+            self.iot.mqtt.publish('curtain', str(self.MAX))
+            print('[curtain] '+ str(self.MAX))
         else:
-            value = self.value + self.offsetx - 12
-            value = 0 if value < 0 else value
-            value = 24 if value > 24 else value
-            self.iot.mqtt.publish('window', str(value))
-            print('[window] ' + str(value))
+            value = self.value + self.offsetx - self.MAX
+            value = limit(value, 0, self.MAX)
+            value = int(value)
+            self.iot.mqtt.publish('curtain', str(value))
+            print('[curtain] ' + str(value))
 
     def toggle(self, value):
         self.power = int(value)
@@ -166,9 +167,8 @@ class Window:
     def sensor(self, value):
         MIN = 50
         MAX = 400
-        value = MIN if value < MIN else value
-        value = MAX if value > MAX else value
-        self.value = round((value - MIN) * 24 / (MAX - MIN))
+        value = limit(value, MIN, MAX)
+        self.value = round((value - MIN) * self.MAX / (MAX - MIN))
         self.publish()
 
 
@@ -330,6 +330,7 @@ class SensorTemperature:
 
     def update(self, value):
         self.value = int(value)
+        self.iot.device['window'].sensor(self.value)
 
 
 class SensorHumidity:

@@ -1,0 +1,21 @@
+<html>
+
+<head>
+    <title>Window</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" charset="utf-8" />
+    <link rel="stylesheet" href="https://bootswatch.com/4/cerulean/bootstrap.min.css">
+    <script src="window.js"></script>
+</head>
+
+<body>
+    <div style="text-align: center;">
+        <h1 id="window" style="color: #2fa4e7;">Window</h1>
+        <img src="window.png" width="300" onclick="toggle()"/>
+        <h3 id="power">Auto</h3>
+        <div>
+            <input class="custom-range" type="range" onchange="offset(this.value)" min= 0 max=360 value=180 style="width: 300px;">
+        </div>
+    </div>
+</body>
+
+</html>
