@@ -19,18 +19,18 @@ class IoT:
         self.device = {
             'light': Light(self),
             'curtain': Curtain(self),
-            'window': Window(self),
-            'fan': Fan(self),
-            'humidifier': Humidifier(self),
-            'rotator': Rotator(self)
+            # 'window': Window(self),
+            # 'fan': Fan(self),
+            # 'humidifier': Humidifier(self),
+            # 'rotator': Rotator(self)
         }
 
         self.sensor = {
             'sensorlight': SensorLight(self),
-            'sensorRain': SensorRain(self),
+            # 'sensorRain': SensorRain(self),
             'sensorTemperature': SensorTemperature(self),
             'sensorHumidity': SensorHumidity(self),
-            'sensorBody': SensorBody(self)
+            # 'sensorBody': SensorBody(self)
         }
 
     def mqttMsg(self, client, userdata, msg):
