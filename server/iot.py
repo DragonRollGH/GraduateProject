@@ -326,24 +326,20 @@ class SensorTemperature:
     def __init__(self, iot):
         self.iot = iot
         self.value = 0
-        self.iot.mqtt.subscribe('sensorlight')
+        self.iot.mqtt.subscribe('temperature')
 
     def update(self, value):
         self.value = int(value)
-        self.iot.device['light'].sensor(self.value)
-        self.iot.device['curtain'].sensor(self.value)
 
 
 class SensorHumidity:
     def __init__(self, iot):
         self.iot = iot
         self.value = 0
-        self.iot.mqtt.subscribe('sensorlight')
+        self.iot.mqtt.subscribe('humidity')
 
     def update(self, value):
         self.value = int(value)
-        self.iot.device['light'].sensor(self.value)
-        self.iot.device['curtain'].sensor(self.value)
 
 
 class SensorBody:

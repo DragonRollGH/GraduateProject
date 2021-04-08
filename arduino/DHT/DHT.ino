@@ -35,6 +35,8 @@ void loop()
   }
   MQTT.loop();
 
-  MQTT.publish("dht", String(Dht.getHumidity()) + ';' + String(Dht.getTemperature()));
+  MQTT.publish("humidity", String(Dht.getHumidity()));
+  delay(500);
+  MQTT.publish("temperature", String(Dht.getTemperature()));
   delay(10000);
 }
