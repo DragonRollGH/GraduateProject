@@ -26,7 +26,7 @@ class IoT:
         }
 
         self.sensor = {
-            'sensorlight': SensorLight(self),
+            'sensorLight': SensorLight(self),
             # 'sensorRain': SensorRain(self),
             'sensorTemperature': SensorTemperature(self),
             'sensorHumidity': SensorHumidity(self),
@@ -314,7 +314,7 @@ class SensorRain:
     def __init__(self, iot):
         self.iot = iot
         self.value = 0
-        self.iot.mqtt.subscribe('sensorlight')
+        self.iot.mqtt.subscribe('sensorLight')
 
     def update(self, value):
         self.value = int(value)
@@ -326,7 +326,7 @@ class SensorTemperature:
     def __init__(self, iot):
         self.iot = iot
         self.value = 0
-        self.iot.mqtt.subscribe('temperature')
+        self.iot.mqtt.subscribe('sensorTemperature')
 
     def update(self, value):
         self.value = int(value)
@@ -337,7 +337,7 @@ class SensorHumidity:
     def __init__(self, iot):
         self.iot = iot
         self.value = 0
-        self.iot.mqtt.subscribe('humidity')
+        self.iot.mqtt.subscribe('sensorHumidity')
 
     def update(self, value):
         self.value = int(value)
