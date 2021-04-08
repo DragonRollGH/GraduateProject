@@ -8,7 +8,7 @@ DHT Dht;
 
 void mqttConnect(void)
 {
-  while (!MQTT.connect("dht"))
+  while (!MQTT.connect("Dht"))
   {
     delay(500);
   }
@@ -35,6 +35,6 @@ void loop()
   }
   MQTT.loop();
 
-  MQTT.publish("Dht", String(Dht.getHumidity()) + ';' + String(Dht.getTemperature()));
+  MQTT.publish("dht", String(Dht.getHumidity()) + ';' + String(Dht.getTemperature()));
   delay(10000);
 }
