@@ -21,6 +21,7 @@ class IoT:
             print(e)
 
         self.db = DB(self)
+        self.db.update()
 
         self.devices = {
             'light': Light(self),
@@ -56,7 +57,11 @@ class IoT:
 
 class DB:
     def __init__(self, iot):
-        self.timeout = 60
+        self.period = 60
+
+        self.conn = sqlite3.connect('database.db')
+        self.cur = conn.cursor()
+
         self.values = {
             'light': [],
             'curtain': [],
@@ -77,7 +82,14 @@ class DB:
             device.append(value)
 
     def update(self):
-        setTimeout(self.timeout, self.update).start()
+        value = []
+        for k in self.values.keys():
+            value.append(sum(self.values[k])/len(self.values[k]) if self.values[k] else 'null')
+            self.values[k] = []
+        sql = 'insert into iot values ({})'.format(','.join(value))
+        self.cur.execute(sql)
+        self.conn.commit()
+        setTimeout(self.period, self.update).start()
 
 
 class Light:
