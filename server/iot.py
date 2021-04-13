@@ -10,11 +10,14 @@ def limit(value, MIN, MAX):
 
 class IoT:
     def __init__(self):
-        self.mqtt = MQTT.Client('IoT_'+str(random.randint(10, 99)))
-        self.mqtt.connect("192.168.1.110")
-        self.mqtt.subscribe('IoT')
-        self.mqtt.on_message = self.mqttMsg
-        self.mqtt.loop_start()
+        try:
+            self.mqtt = MQTT.Client('IoT_'+str(random.randint(10, 99)))
+            self.mqtt.connect("192.168.1.110")
+            self.mqtt.subscribe('IoT')
+            self.mqtt.on_message = self.mqttMsg
+            self.mqtt.loop_start()
+        except Exception as e:
+            print(e)
 
         self.device = {
             'light': Light(self),
