@@ -1,6 +1,7 @@
 import paho.mqtt.client as MQTT
 import random
-
+import sqlite3
+from threading import Timer as setTimeout
 
 def limit(value, MIN, MAX):
     value = MIN if value < MIN else value
@@ -19,7 +20,9 @@ class IoT:
         except Exception as e:
             print(e)
 
-        self.device = {
+        self.db = DB(self)
+
+        self.devices = {
             'light': Light(self),
             'curtain': Curtain(self),
             # 'window': Window(self),
@@ -28,7 +31,7 @@ class IoT:
             # 'rotator': Rotator(self)
         }
 
-        self.sensor = {
+        self.sensors = {
             'sensorLight': SensorLight(self),
             # 'sensorRain': SensorRain(self),
             'sensorTemperature': SensorTemperature(self),
@@ -38,12 +41,12 @@ class IoT:
 
     def mqttMsg(self, client, userdata, msg):
         print('[{}] {}'.format(msg.topic, msg.payload))
-        sensor = self.sensor.get(msg.topic)
+        sensor = self.sensors.get(msg.topic)
         if sensor:
             sensor.update(msg.payload)
 
     def api(self, form):
-        device = self.device.get(form.get('d'))
+        device = self.devices.get(form.get('d'))
         if device:
             method = device.method.get(form.get('m'))
             if method:
@@ -51,10 +54,36 @@ class IoT:
                 if args != None:
                     method(args)
 
+class DB:
+    def __init__(self, iot):
+        self.timeout = 60
+        self.values = {
+            'light': [],
+            'curtain': [],
+            'window': [],
+            'fan': [],
+            'humidifier': [],
+            'rotator': [],
+            'sensorLight': [],
+            'sensorRain': [],
+            'sensorTemperature': [],
+            'sensorHumidity': [],
+            'sensorBody': []
+        }
+
+    def record (self, name, value):
+        device = self.values.get(name)
+        if device != None:
+            device.append(value)
+
+    def update(self):
+        setTimeout(self.timeout, self.update).start()
+
 
 class Light:
-    def __init__(self, iot):
+    def __init__(self, iot, name):
         self.iot = iot
+        self.name = name
         self.method = {
             'offset': self.offset,
             'toggle': self.toggle
@@ -74,6 +103,7 @@ class Light:
             value = int(value)
             self.iot.mqtt.publish('light', str(value))
             print('[light] ' + str(value))
+
 
     def toggle(self, value):
         self.power = int(value)
@@ -309,8 +339,8 @@ class SensorLight:
 
     def update(self, value):
         self.value = int(value)
-        self.iot.device['light'].sensor(self.value)
-        self.iot.device['curtain'].sensor(self.value)
+        self.iot.devices['light'].sensor(self.value)
+        self.iot.devices['curtain'].sensor(self.value)
 
 
 class SensorRain:
@@ -321,8 +351,8 @@ class SensorRain:
 
     def update(self, value):
         self.value = int(value)
-        self.iot.device['light'].sensor(self.value)
-        self.iot.device['curtain'].sensor(self.value)
+        self.iot.devices['light'].sensor(self.value)
+        self.iot.devices['curtain'].sensor(self.value)
 
 
 class SensorTemperature:
@@ -333,7 +363,7 @@ class SensorTemperature:
 
     def update(self, value):
         self.value = int(value)
-        self.iot.device['window'].sensor(self.value)
+        self.iot.devices['window'].sensor(self.value)
 
 
 class SensorHumidity:
@@ -354,5 +384,5 @@ class SensorBody:
 
     def update(self, value):
         self.value = int(value)
-        self.iot.device['light'].sensor(self.value)
-        self.iot.device['curtain'].sensor(self.value)
+        self.iot.devices['light'].sensor(self.value)
+        self.iot.devices['curtain'].sensor(self.value)
