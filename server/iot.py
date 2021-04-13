@@ -3,6 +3,7 @@ import random
 import sqlite3
 from threading import Timer as setTimeout
 
+
 def limit(value, MIN, MAX):
     value = MIN if value < MIN else value
     value = MAX if value > MAX else value
@@ -55,6 +56,7 @@ class IoT:
                 if args != None:
                     method(args)
 
+
 class DB:
     def __init__(self, iot):
         self.period = 60
@@ -76,7 +78,7 @@ class DB:
             'sensorBody': []
         }
 
-    def record (self, name, value):
+    def record(self, name, value):
         device = self.values.get(name)
         if device != None:
             device.append(value)
@@ -84,7 +86,8 @@ class DB:
     def update(self):
         value = []
         for k in self.values.keys():
-            value.append(sum(self.values[k])/len(self.values[k]) if self.values[k] else 'null')
+            value.append(
+                sum(self.values[k])/len(self.values[k]) if self.values[k] else 'null')
             self.values[k] = []
         sql = 'insert into iot values ({})'.format(','.join(value))
         self.cur.execute(sql)
@@ -105,32 +108,32 @@ class Light:
         self.value = self.MAX / 2
         self.offsetx = self.MAX
 
-    def publish(self):
+    def update(self):
         if self.power is 0:
-            self.iot.mqtt.publish('light', '0')
-            print('[light] 0')
+            value = '0'
         else:
             value = self.value + self.offsetx - self.MAX
             value = limit(value, 0, self.MAX)
-            value = int(value)
-            self.iot.mqtt.publish('light', str(value))
-            print('[light] ' + str(value))
+            value = str(int(value))
 
+        self.iot.mqtt.publish(self.name, value)
+        self.iot.db.record(self.name, value)
+        print('[{}] {}'.format(self.name, value))
 
     def toggle(self, value):
         self.power = int(value)
-        self.publish()
+        self.update()
 
     def offset(self, value):
         self.offsetx = int(value)
-        self.publish()
+        self.update()
 
     def sensor(self, value):
         MIN = 50
         MAX = 400
         value = limit(value, MIN, MAX)
         self.value = round((value - MIN) * self.MAX / (MAX - MIN))
-        self.publish()
+        self.update()
 
 
 class Curtain:
@@ -151,7 +154,7 @@ class Curtain:
             print('[curtain] 0')
         elif self.power is 2:
             self.iot.mqtt.publish('curtain', str(self.MAX))
-            print('[curtain] '+ str(self.MAX))
+            print('[curtain] ' + str(self.MAX))
         else:
             value = self.value + self.offsetx - self.MAX
             value = limit(value, 0, self.MAX)
@@ -193,7 +196,7 @@ class Window:
             print('[curtain] 0')
         elif self.power is 2:
             self.iot.mqtt.publish('curtain', str(self.MAX))
-            print('[curtain] '+ str(self.MAX))
+            print('[curtain] ' + str(self.MAX))
         else:
             value = self.value + self.offsetx - self.MAX
             value = limit(value, 0, self.MAX)
