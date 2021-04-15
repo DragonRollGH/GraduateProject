@@ -58,8 +58,9 @@ class IoT:
                     method(args)
 
     def history(self, form):
-        pass
-
+        device = self.devices.get(form.get('d'))
+        if device:
+            pass
 
 class DB:
     def __init__(self, iot):
