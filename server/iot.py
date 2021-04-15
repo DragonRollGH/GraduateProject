@@ -25,8 +25,8 @@ class IoT:
         self.db.update()
 
         self.devices = {
-            'light': Light(self, 'light'),
-            'curtain': Curtain(self, 'curtain'),
+            'light': Device(self, 'light', 24, 50, 400),
+            'curtain': Device(self, 'curtain', 24, 50, 400),
             # 'window': Window(self),
             # 'fan': Fan(self),
             # 'humidifier': Humidifier(self),
@@ -34,10 +34,10 @@ class IoT:
         }
 
         self.sensors = {
-            'sensorLight': SensorLight(self),
+            'lightness': Sensor(self, 'lightness', ['light', 'curtain']),
             # 'sensorRain': SensorRain(self),
-            'sensorTemperature': SensorTemperature(self),
-            'sensorHumidity': SensorHumidity(self),
+            'temperature': Sensor(self, 'Temperature', []),
+            'humidity': Sensor(self, 'humidity', []),
             # 'sensorBody': SensorBody(self)
         }
 
@@ -96,28 +96,33 @@ class DB:
 
 
 class Device:
-    def __init__(self, iot, name):
+    def __init__(self, iot, name, maxValue, sensorMin, sensorMax):
         self.iot = iot
         self.name = name
         self.power = 1
-        self.maxValue= 100
+        self.maxValue = maxValue
+        self.sensorMin = sensorMin
+        self.sensorMax = sensorMax
         self.value = self.maxValue / 2
         self.offsetValue = 0
         self.outputValue = self.value
-        self.sensorMin = None
-        self.sensorMax = None
         self.method = {
             'offset': self.offset,
             'toggle': self.toggle
         }
 
     def update(self):
-        self.outputValue = limit(self.value + self.offsetValue, self.maxValue) if self.power else 0
+        if self.power is 0:
+            self.outputValue = 0
+        elif self.power is 2:
+            self.outputValue = self.maxValue
+        else:
+            self.outputValue = limit(self.value + self.offsetValue, self.maxValue)
 
     def publish(self):
         self.update()
         self.iot.mqtt.publish(self.name, self.outputValue)
-        self.iot.db.record(self.name, self.outputValuee)
+        self.iot.db.record(self.name, self.outputValue)
         print('[{}] {}'.format(self.name, self.outputValue))
 
     def toggle(self, value):
@@ -128,87 +133,23 @@ class Device:
         self.offsetValue = int(value) - self.maxValue
         self.publish()
 
-    def sensor(self, value):
+    def sensor(self, name, value):
         value = limit(value, self.sensorMax, self.sensorMin)
         self.value = round((value - self.sensorMin) * self.MAX / (self.sensorMax - self.sensorMin))
         self.publish()
 
-class Light(Device):
-    def __init__(self, iot, name):
-        super.__init__(iot, name)
-        self.maxValue = 24
-        self.sensorMin = 50
-        self.sensorMax = 400
 
-
-class Curtain:
-    def __init__(self, iot, name):
-        super.__init__(iot, name)
-        self.maxValue = 180
-        self.sensorMin = 50
-        self.sensorMax = 400
-
-    def update(self):
-        if self.power is 0:
-            self.outputValue = 0
-        elif self.power is 2:
-            self.outputValue = self.maxValue
-        else:
-            self.outputValue = limit(self.value + self.offsetx, self.maxValue)
-
-
-class SensorLight:
-    def __init__(self, iot):
+class Sensor:
+    def __init__(self, iot, name, devices):
         self.iot = iot
+        self.name = name
         self.value = 0
-        self.iot.mqtt.subscribe('sensorlight')
+        self.iot.mqtt.subscribe(self.name)
+        self.devices = devices
 
     def update(self, value):
         self.value = int(value)
-        self.iot.devices['light'].sensor(self.value)
-        self.iot.devices['curtain'].sensor(self.value)
-
-
-class SensorRain:
-    def __init__(self, iot):
-        self.iot = iot
-        self.value = 0
-        self.iot.mqtt.subscribe('sensorLight')
-
-    def update(self, value):
-        self.value = int(value)
-        self.iot.devices['light'].sensor(self.value)
-        self.iot.devices['curtain'].sensor(self.value)
-
-
-class SensorTemperature:
-    def __init__(self, iot):
-        self.iot = iot
-        self.value = 0
-        self.iot.mqtt.subscribe('sensorTemperature')
-
-    def update(self, value):
-        self.value = int(value)
-        self.iot.devices['window'].sensor(self.value)
-
-
-class SensorHumidity:
-    def __init__(self, iot):
-        self.iot = iot
-        self.value = 0
-        self.iot.mqtt.subscribe('sensorHumidity')
-
-    def update(self, value):
-        self.value = int(value)
-
-
-class SensorBody:
-    def __init__(self, iot):
-        self.iot = iot
-        self.value = 0
-        self.iot.mqtt.subscribe('sensorlight')
-
-    def update(self, value):
-        self.value = int(value)
-        self.iot.devices['light'].sensor(self.value)
-        self.iot.devices['curtain'].sensor(self.value)
+        for d in self.devices:
+            self.iot.devices[d].sensor(self.name, self.value)
+        self.iot.db.record(self.name, self.value)
+        print('[{}] {}'.format(self.name, self.value))
