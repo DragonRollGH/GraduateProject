@@ -27,7 +27,7 @@ class IoT:
 
         self.devices = {
             'light': Device(self, 'light', 24, 50, 400),
-            'curtain': Device(self, 'curtain', 24, 50, 400),
+            'curtain': Device(self, 'curtain', 180, 50, 400),
             # 'window': Window(self),
             # 'fan': Fan(self),
             # 'humidifier': Humidifier(self),
@@ -130,8 +130,7 @@ class Device:
         elif self.power is 2:
             self.outputValue = self.maxValue
         else:
-            self.outputValue = limit(
-                self.value + self.offsetValue, self.maxValue)
+            self.outputValue = int(limit(self.value + self.offsetValue, self.maxValue))
 
     def publish(self):
         self.update()
