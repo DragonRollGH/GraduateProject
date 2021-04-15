@@ -25,8 +25,8 @@ class IoT:
         self.db.update()
 
         self.devices = {
-            'light': Light(self),
-            'curtain': Curtain(self),
+            'light': Light(self, 'light'),
+            'curtain': Curtain(self, 'curtain'),
             # 'window': Window(self),
             # 'fan': Fan(self),
             # 'humidifier': Humidifier(self),
@@ -102,7 +102,7 @@ class Device:
         self.power = 1
         self.maxValue= 100
         self.value = self.maxValue / 2
-        self.offsetValue = self.maxValue
+        self.offsetValue = 0
         self.outputValue = self.value
         self.sensorMin = None
         self.sensorMax = None
@@ -112,7 +112,7 @@ class Device:
         }
 
     def update(self):
-        self.outputValue = limit(self.value, self.maxValue) if self.power else 0
+        self.outputValue = limit(self.value + self.offsetValue, self.maxValue) if self.power else 0
 
     def publish(self):
         self.update()
@@ -125,7 +125,7 @@ class Device:
         self.publish()
 
     def offset(self, value):
-        self.offsetValue = int(value)
+        self.offsetValue = int(value) - self.maxValue
         self.publish()
 
     def sensor(self, value):
@@ -138,48 +138,23 @@ class Light(Device):
         super.__init__(iot, name)
         self.maxValue = 24
         self.sensorMin = 50
-        self.sensorMax = 500
+        self.sensorMax = 400
+
 
 class Curtain:
-    def __init__(self, iot):
-        self.iot = iot
-        self.method = {
-            'offset': self.offset,
-            'toggle': self.toggle
-        }
-        self.MAX = 180
-        self.power = 1
-        self.value = self.MAX / 2
-        self.offsetx = self.MAX
+    def __init__(self, iot, name):
+        super.__init__(iot, name)
+        self.maxValue = 180
+        self.sensorMin = 50
+        self.sensorMax = 400
 
-    def publish(self):
+    def update(self):
         if self.power is 0:
-            self.iot.mqtt.publish('curtain', '0')
-            print('[curtain] 0')
+            self.outputValue = 0
         elif self.power is 2:
-            self.iot.mqtt.publish('curtain', str(self.MAX))
-            print('[curtain] ' + str(self.MAX))
+            self.outputValue = self.maxValue
         else:
-            value = self.value + self.offsetx - self.MAX
-            value = limit(value, 0, self.MAX)
-            value = int(value)
-            self.iot.mqtt.publish('curtain', str(value))
-            print('[curtain] ' + str(value))
-
-    def toggle(self, value):
-        self.power = int(value)
-        self.publish()
-
-    def offset(self, value):
-        self.offsetx = int(value)
-        self.publish()
-
-    def sensor(self, value):
-        MIN = 50
-        MAX = 400
-        value = limit(value, MIN, MAX)
-        self.value = round((value - MIN) * self.MAX / (MAX - MIN))
-        self.publish()
+            self.outputValue = limit(self.value + self.offsetx, self.maxValue)
 
 
 class Window:
