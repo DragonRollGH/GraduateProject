@@ -1,10 +1,12 @@
-import paho.mqtt.client as MQTT
 import random
 import sqlite3
-from threading import Timer as setTimeout
+import time
+from threading import Timer
+
+import paho.mqtt.client as MQTT
 
 
-def limit(value, MAX, MIN = 0):
+def limit(value, MAX, MIN=0):
     value = MIN if value < MIN else value
     value = MAX if value > MAX else value
     return value
@@ -22,7 +24,6 @@ class IoT:
             print(e)
 
         self.db = DB(self)
-        self.db.update()
 
         self.devices = {
             'light': Device(self, 'light', 24, 50, 400),
@@ -59,11 +60,8 @@ class IoT:
 
 class DB:
     def __init__(self, iot):
-        self.period = 60
-
-        self.conn = sqlite3.connect('server/database.db')
-        self.cur = conn.cursor()
-
+        self.period = 6
+        self.name = 'server/database.db'
         self.values = {
             'light': [],
             'curtain': [],
@@ -71,28 +69,43 @@ class DB:
             'fan': [],
             'humidifier': [],
             'rotator': [],
-            'sensorLight': [],
-            'sensorRain': [],
-            'sensorTemperature': [],
-            'sensorHumidity': [],
-            'sensorBody': []
+            'lightness': [],
+            'rain': [],
+            'temperature': [],
+            'humidity': [],
+            'body': []
         }
+        self.setTimeout()
 
     def record(self, name, value):
         device = self.values.get(name)
         if device != None:
             device.append(value)
 
+    def setTimeout(self):
+        Timer(self.period, self.update).start()
+
     def update(self):
         value = []
+        allNull = True
         for k in self.values.keys():
-            value.append(
-                sum(self.values[k])/len(self.values[k]) if self.values[k] else 'null')
+            if self.values[k]:
+                avg = int(sum(self.values[k])/len(self.values[k]))
+                value.append(str(avg))
+                allNull = False
+            else:
+                value.append('null')
             self.values[k] = []
-        sql = 'insert into iot values ({})'.format(','.join(value))
-        self.cur.execute(sql)
-        self.conn.commit()
-        setTimeout(self.period, self.update).start()
+
+        if not allNull:
+            sql = 'insert into iot values ({},{})'.format(int(time.time()), ','.join(value))
+            print(sql)
+            conn = sqlite3.connect(self.name)
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
+            conn.close()
+        self.setTimeout()
 
 
 class Device:
@@ -117,7 +130,8 @@ class Device:
         elif self.power is 2:
             self.outputValue = self.maxValue
         else:
-            self.outputValue = limit(self.value + self.offsetValue, self.maxValue)
+            self.outputValue = limit(
+                self.value + self.offsetValue, self.maxValue)
 
     def publish(self):
         self.update()
@@ -135,7 +149,8 @@ class Device:
 
     def sensor(self, name, value):
         value = limit(value, self.sensorMax, self.sensorMin)
-        self.value = round((value - self.sensorMin) * self.MAX / (self.sensorMax - self.sensorMin))
+        self.value = round((value - self.sensorMin) *
+                           self.MAX / (self.sensorMax - self.sensorMin))
         self.publish()
 
 
