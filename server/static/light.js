@@ -25,4 +25,6 @@ onload = function () {
     ctx = document.getElementById("Canvas").getContext("2d");
     ctx.fillStyle = "rgb(255,200,0)";
     Request = new XMLHttpRequest();
+    Request.open('GET', `/api?d=light&m=history&a=0`, true);
+    Request.send();
 }

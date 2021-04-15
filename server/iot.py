@@ -57,6 +57,9 @@ class IoT:
                 if args != None:
                     method(args)
 
+    def history(self, form):
+        pass
+
 
 class DB:
     def __init__(self, iot):
@@ -121,7 +124,8 @@ class Device:
         self.outputValue = self.value
         self.method = {
             'offset': self.offset,
-            'toggle': self.toggle
+            'toggle': self.toggle,
+            'history': self.history
         }
 
     def update(self):

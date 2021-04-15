@@ -15,5 +15,10 @@ def api():
     iot.api(values)
     return values
 
+@app.route("/history")
+def api():
+    values = request.values
+    return iot.history(values)
+
 if __name__ == '__main__':
     app.run(debug=True)
