@@ -133,46 +133,12 @@ class Device:
         self.value = round((value - self.sensorMin) * self.MAX / (self.sensorMax - self.sensorMin))
         self.publish()
 
-class Light:
+class Light(Device):
     def __init__(self, iot, name):
-        self.iot = iot
-        self.name = name
-        self.method = {
-            'offset': self.offset,
-            'toggle': self.toggle
-        }
-        self.MAX = 24
-        self.power = 1
-        self.value = self.MAX / 2
-        self.offsetx = self.MAX
-
-    def update(self):
-        if self.power is 0:
-            value = '0'
-        else:
-            value = self.value + self.offsetx - self.MAX
-            value = limit(value, 0, self.MAX)
-            value = str(int(value))
-
-        self.iot.mqtt.publish(self.name, value)
-        self.iot.db.record(self.name, value)
-        print('[{}] {}'.format(self.name, value))
-
-    def toggle(self, value):
-        self.power = int(value)
-        self.update()
-
-    def offset(self, value):
-        self.offsetx = int(value)
-        self.update()
-
-    def sensor(self, value):
-        MIN = 50
-        MAX = 400
-        value = limit(value, MIN, MAX)
-        self.value = round((value - MIN) * self.MAX / (MAX - MIN))
-        self.update()
-
+        super.__init__(iot, name)
+        self.maxValue = 24
+        self.sensorMin = 50
+        self.sensorMax = 500
 
 class Curtain:
     def __init__(self, iot):
