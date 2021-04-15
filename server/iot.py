@@ -130,7 +130,12 @@ class Device:
         elif self.power is 2:
             self.outputValue = self.maxValue
         else:
-            self.outputValue = int(limit(self.value + self.offsetValue, self.maxValue))
+            offset = 0
+            if self.offsetValue > 0:
+                offset = (self.maxValue - self.value) * self.offsetValue
+            elif self.offsetValue < 0:
+                offset = self.value * self.offsetValue
+            self.outputValue = int(limit(self.value + offset, self.maxValue))
 
     def publish(self):
         self.update()
@@ -143,13 +148,12 @@ class Device:
         self.publish()
 
     def offset(self, value):
-        self.offsetValue = int(value) - self.maxValue
+        self.offsetValue = int(value) / 100
         self.publish()
 
     def sensor(self, name, value):
         value = limit(value, self.sensorMax, self.sensorMin)
-        self.value = round((value - self.sensorMin) *
-                           self.MAX / (self.sensorMax - self.sensorMin))
+        self.value = round((value - self.sensorMin) * self.MAX / (self.sensorMax - self.sensorMin))
         self.publish()
 
 
