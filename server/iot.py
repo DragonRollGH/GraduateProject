@@ -4,7 +4,7 @@ import sqlite3
 from threading import Timer as setTimeout
 
 
-def limit(value, MIN, MAX):
+def limit(value, MAX, MIN = 0):
     value = MIN if value < MIN else value
     value = MAX if value > MAX else value
     return value
@@ -61,7 +61,7 @@ class DB:
     def __init__(self, iot):
         self.period = 60
 
-        self.conn = sqlite3.connect('database.db')
+        self.conn = sqlite3.connect('server/database.db')
         self.cur = conn.cursor()
 
         self.values = {
@@ -94,6 +94,44 @@ class DB:
         self.conn.commit()
         setTimeout(self.period, self.update).start()
 
+
+class Device:
+    def __init__(self, iot, name):
+        self.iot = iot
+        self.name = name
+        self.power = 1
+        self.maxValue= 100
+        self.value = self.maxValue / 2
+        self.offsetValue = self.maxValue
+        self.outputValue = self.value
+        self.sensorMin = None
+        self.sensorMax = None
+        self.method = {
+            'offset': self.offset,
+            'toggle': self.toggle
+        }
+
+    def update(self):
+        self.outputValue = limit(self.value, self.maxValue) if self.power else 0
+
+    def publish(self):
+        self.update()
+        self.iot.mqtt.publish(self.name, self.outputValue)
+        self.iot.db.record(self.name, self.outputValuee)
+        print('[{}] {}'.format(self.name, self.outputValue))
+
+    def toggle(self, value):
+        self.power = int(value)
+        self.publish()
+
+    def offset(self, value):
+        self.offsetValue = int(value)
+        self.publish()
+
+    def sensor(self, value):
+        value = limit(value, self.sensorMax, self.sensorMin)
+        self.value = round((value - self.sensorMin) * self.MAX / (self.sensorMax - self.sensorMin))
+        self.publish()
 
 class Light:
     def __init__(self, iot, name):
