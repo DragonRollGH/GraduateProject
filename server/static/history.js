@@ -1,30 +1,21 @@
-power = false;
-
-
-function toggle() {
-    power = !power;
-    if (power) {
-        document.getElementById("Light").style = "color: rgb(255,200,0);"
-        ctx.fillRect(0, 0, 300, 300);
-        Request.open('GET', `/api?d=light&m=toggle&a=1`, true);
-        Request.send();
-    } else {
-        document.getElementById("Light").style = "color: gray;"
-        ctx.clearRect(0, 0, 300, 300);
-        Request.open('GET', `/api?d=light&m=toggle&a=0`, true);
-        Request.send();
-    }
-}
-
-function offset(value) {
-    Request.open('GET', `/api?d=light&m=offset&a=${value}`, true);
-    Request.send();
-}
 
 onload = function () {
-    ctx = document.getElementById("Canvas").getContext("2d");
-    ctx.fillStyle = "rgb(255,200,0)";
-    Request = new XMLHttpRequest();
-    Request.open('GET', `/history?d=light`, true);
-    Request.send();
+    // ctx = document.getElementById("Canvas").getContext("2d");
+    // ctx.fillStyle = "rgb(255,200,0)";
+    devices = [
+        'light',
+    ];
+    datas = [];
+    requests = [];
+    for (let i in devices) {
+        requests.push(new XMLHttpRequest());
+        requests[i].open('GET', `/api/history?d=${devices[i]}`, true);
+        requests[i].send()
+        requests[i].onreadystatechange = ()=>{
+            if (requests[i].readyState == 4) {
+                datas.push(requests[i].responseText)
+                console.log(requests[i].responseText);
+            }
+        }
+    }
 }
