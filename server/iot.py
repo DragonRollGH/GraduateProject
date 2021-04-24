@@ -1,3 +1,4 @@
+import json
 import random
 import sqlite3
 import time
@@ -58,9 +59,11 @@ class IoT:
                     method(args)
 
     def history(self, form):
-        device = self.devices.get(form.get('d'))
+        device = form.get('d')
         if device:
-            pass
+            return self.db.get(device)
+        else:
+            return 0
 
 class DB:
     def __init__(self, iot):
@@ -80,6 +83,17 @@ class DB:
             'body': []
         }
         self.setTimeout()
+
+    def get(self, device):
+        sql = 'select {} from iot'.format(device)
+        print(sql)
+        conn = sqlite3.connect(self.name)
+        cur = conn.cursor()
+        cur.execute(sql)
+        data = cur.fetchall()
+        conn.close()
+        data = [str(i[0]) for i in data]
+        return json.dumps(data)
 
     def record(self, name, value):
         device = self.values.get(name)
@@ -126,7 +140,6 @@ class Device:
         self.method = {
             'offset': self.offset,
             'toggle': self.toggle,
-            'history': self.history
         }
 
     def update(self):

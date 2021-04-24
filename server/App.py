@@ -15,8 +15,8 @@ def api():
     iot.api(values)
     return values
 
-@app.route("/history")
-def api():
+@app.route("/api/history")
+def history():
     values = request.values
     return iot.history(values)
 
