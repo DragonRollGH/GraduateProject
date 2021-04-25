@@ -59,41 +59,55 @@ class IoT:
                     method(args)
 
     def history(self, form):
-        device = form.get('d')
-        if device:
-            return self.db.get(device)
-        else:
-            return 0
+        return self.db.get()
+        # device = form.get('d')
+        # if device:
+        #     return self.db.get(device)
+        # else:
+        #     return 0
 
 class DB:
     def __init__(self, iot):
         self.period = 6
         self.name = 'server/database.db'
-        self.values = {
-            'light': [],
-            'curtain': [],
-            'window': [],
-            'fan': [],
-            'humidifier': [],
-            'rotator': [],
-            'lightness': [],
-            'rain': [],
-            'temperature': [],
-            'humidity': [],
-            'body': []
-        }
+        self.keys = tuple((
+            'time',
+            'light',
+            'curtain',
+            'window',
+            'fan',
+            'humidifier',
+            'rotator',
+            'lightness',
+            'rain',
+            'temperature',
+            'humidity',
+            'body'
+        ))
+        self.values = { k: [] for k in self.keys if k is not 'time'}
         self.setTimeout()
 
-    def get(self, device):
-        sql = 'select {} from iot'.format(device)
-        print(sql)
+    # def get(self, device):
+    #     sql = 'select {} from iot'.format(device)
+    #     print(sql)
+    #     conn = sqlite3.connect(self.name)
+    #     cur = conn.cursor()
+    #     cur.execute(sql)
+    #     data = cur.fetchall()
+    #     conn.close()
+    #     data = [str(i[0]) for i in data]
+    #     return json.dumps(data)
+    def get(self):
+        sql = 'select * from iot'
         conn = sqlite3.connect(self.name)
         cur = conn.cursor()
         cur.execute(sql)
         data = cur.fetchall()
         conn.close()
-        data = [str(i[0]) for i in data]
-        return json.dumps(data)
+        value = {}
+        for i,k in enumerate(self.keys):
+            value[k] = [d[i] for d in data]
+        return json.dumps(value)
 
     def record(self, name, value):
         device = self.values.get(name)
@@ -108,7 +122,7 @@ class DB:
         allNull = True
         for k in self.values.keys():
             if self.values[k]:
-                avg = int(sum(self.values[k])/len(self.values[k]))
+                avg = int(sum(self.values[k])/len(self.values[k])) #TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'
                 value.append(str(avg))
                 allNull = False
             else:

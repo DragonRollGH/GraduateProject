@@ -1,6 +1,6 @@
 function drawCharts(values) {
     let charts = {
-        light: ['light',],
+        light: ['light','curtain'],
     };
     let colors = [
         'red',
@@ -17,6 +17,7 @@ function drawCharts(values) {
                 borderColor: colors[i],
                 spanGaps: true,
                 lineTension: 0.5,
+                stepped: true,
             });
         }
         new Chart(ctx, {
@@ -32,6 +33,7 @@ function drawCharts(values) {
 onload = function () {
     let request = new XMLHttpRequest();
     request.open("GET", '/api/history');
+    request.send();
     request.onreadystatechange = ()=>{
         if (request.readyState == 4) {
             let values = JSON.parse(request.responseText);
