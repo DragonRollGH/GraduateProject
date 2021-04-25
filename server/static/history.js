@@ -6,7 +6,6 @@ function drawCharts(values) {
         'red',
         'blue',
     ]
-    let labels = values.time;
     for (let chart in charts) {
         let ctx = document.getElementById(chart).getContext("2d");
         let datasets = [];
@@ -16,16 +15,27 @@ function drawCharts(values) {
                 label: charts[chart][i],
                 borderColor: colors[i],
                 spanGaps: true,
-                lineTension: 0.5,
+                // lineTension: 0.5,
                 stepped: true,
             });
         }
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: values.time.map(x=>x*1000),
                 datasets: datasets,
             },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            stepSize: 10,
+                            // minUnit: 'minute',
+                        },
+                    }
+                }
+            }
         });
     }
 }
