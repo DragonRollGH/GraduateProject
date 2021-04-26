@@ -1,4 +1,3 @@
-
 #include <DHT.h>
 #include <ESP8266WiFi.h>
 #include <MQTT.h>
@@ -10,15 +9,9 @@
 
 const int MQTTPort = 1883;
 const char *MQTTServer = "192.168.1.110";
-const char *MQTTClientid = "Devices";
-const char *MQTTPub = "devices";
-const String MQTTSub[] = {
-    "curtain",
-    "fan",
-    "humidifier",
-    "light",
-    "window"
-};
+const String MQTTClientid = "Sensors";
+
+
 MQTTClient MQTT;
 WiFiClient WLAN;
 WiFiManager WM;
@@ -31,7 +24,7 @@ struct WiFiEntry {
 };
 std::vector<WiFiEntry> WiFiList;
 
-void DhtLoop
+void DhtLoop()
 {
   MQTT.publish("humidity", String(Dht.getHumidity()));
   MQTT.publish("temperature", String(Dht.getTemperature()));
@@ -42,23 +35,17 @@ void MQTTConnect()
     for (byte i = 0; i < 120; ++i)
     {
         WiFiConnect();
-        if (MQTT.connect("Devices"))
+        if (MQTT.connect((MQTTClientid + millis()).c_str()))
         {
             break;
         }
         delay(500);
-    }
-    for (byte i = 0; i < 5; ++i)
-    {
-        MQTT.subscribe(MQTTSub[i]);
-        delay(10);
     }
 }
 
 void MQTTInitialize()
 {
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
-    MQTT.onMessage(MQTTMsg);
 }
 
 void MQTTLoop()
@@ -68,31 +55,6 @@ void MQTTLoop()
         MQTTConnect();
     }
     MQTT.loop();
-}
-
-void MQTTMsg(String &topic, String &payload)
-{
-    if (topic == "curtain")
-    {
-        curtain(payload.toInt());
-    }
-    else if (topic == "fan")
-    {
-        fan(payload.toInt());
-    }
-    else if (topic == "humidifier")
-    {
-        humidifier(payload.toInt());
-    }
-    else if (topic == "light")
-    {
-        light(payload.toInt());
-    }
-    else if (topic == "window")
-    {
-        window(payload.toInt());
-    }
-
 }
 
 void WiFiAdd(String SSID, String PASS)
@@ -159,7 +121,7 @@ void WiFiInitialize()
 int WiFiPortal()
 {
     WM.setConfigPortalTimeout(10);
-    WM.startConfigPortal(MQTTClientid);
+    WM.startConfigPortal(MQTTClientid.c_str());
     if (WiFi.status() == WL_CONNECTED)
     {
         return 1;
