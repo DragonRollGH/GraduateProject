@@ -1,12 +1,15 @@
 #include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
 #include <Servo.h>
 #include <Ticker.h>
+#include <vector>
 #include <WiFiManager.h>
 
-const String MQTTPub = "IoT_ESP"
+const int MQTTPort = 1883;
+const char *MQTTServer = "192.168.1.110";
+const String MQTTClientid = "Devices";
+const String MQTTPub = "devices";
 const String MQTTSub[] = {
     "curtain",
     "fan",
@@ -14,7 +17,6 @@ const String MQTTSub[] = {
     "light",
     "window"
 };
-ESP8266WiFiMulti STA;
 MQTTClient MQTT;
 WiFiClient WLAN;
 WiFiManager WM;
@@ -38,6 +40,11 @@ const int WindowPin = 5;
 Servo Window;
 Ticker WindowTicker;
 
+struct WiFiEntry {
+    String SSID;
+    String PASS;
+};
+std::vector<WiFiEntry> WiFiList;
 
 void curtain(int value)
 {
@@ -67,18 +74,6 @@ void humidifier(int value)
     }
 }
 
-void curtain(int value)
-{
-    if (0 <= value && value <= CurtainMax)
-    {
-        Curtain.attach(CurtainPin);
-        Curtain.write(value);
-        CurtainTicker.once_ms(500, []() {
-            Curtain.detach();
-        });
-    }
-}
-
 void light(int value)
 {
     if (0 <= value && value <= LightMax)
@@ -104,9 +99,42 @@ void window(int value)
     }
 }
 
+void MQTTConnect()
+{
+    for (byte i = 0; i < 120; ++i)
+    {
+        WiFiConnect();
+        if (MQTT.connect((MQTTClientid + millis()).c_str()))
+        {
+            break;
+        }
+        delay(500);
+    }
+    for (byte i = 0; i < 5; ++i)
+    {
+        MQTT.subscribe(MQTTSub[i]);
+        delay(10);
+    }
+}
+
+void MQTTInitialize()
+{
+    MQTT.begin(MQTTServer, MQTTPort, WLAN);
+    MQTT.onMessage(MQTTMsg);
+}
+
+void MQTTLoop()
+{
+    if (!MQTT.connected())
+    {
+        MQTTConnect();
+    }
+    MQTT.loop();
+}
+
 void MQTTMsg(String &topic, String &payload)
 {
-    else if (topic == "curtain")
+    if (topic == "curtain")
     {
         curtain(payload.toInt());
     }
@@ -129,62 +157,56 @@ void MQTTMsg(String &topic, String &payload)
 
 }
 
-void MQTTConnect()
+void WiFiAdd(String SSID, String PASS)
 {
-    for (byte i = 0; i < 120; ++i)
-    {
-        if (WiFi.status() != WL_CONNECTED)
-        {
-            WiFiConnect();
-        }
-        if (MQTT.connect("IoT"))
-        {
-            break;
-        }
-        delay(500);
-    }
-    MQTT.subscribe(,MQTTSub1);
-    delay(10);
-    MQTT.subscribe(MQTTSub2);
-}
-
-void MQTTInitialize()
-{
-    MQTT.begin("192.168.1.110", WLAN);
-    MQTT.onMessage(MQTTMsg);
-}
-
-void MQTTLoop()
-{
-    if (!MQTT.connected())
-    {
-        MQTTConnect();
-    }
-    MQTT.loop();
+    WiFiList.push_back(WiFiEntry{SSID, PASS});
 }
 
 int WiFiConnect()
 {
-    for (byte i = 0; i < 30; ++i)
-    {
-        if (STA.run() == WL_CONNECTED)
-        {
-            return 1;
-        }
-        delay(500);
-    }
     if (WiFi.status() != WL_CONNECTED)
     {
-        WM.setConfigPortalTimeout(180);
-        WM.startConfigPortal(AP_SSID);
-        if (WiFi.status() == WL_CONNECTED)
+        WiFi.disconnect();
+        WiFi.scanDelete();
+        for (byte k = 0; k < 3; ++k)
         {
-            return 1;
+            byte scanResult = WiFi.scanNetworks();
+            byte bestWiFi = 255;
+            if (scanResult > 0)
+            {
+                int bestRSSI = INT_MIN;
+                for (byte i = 0; i < scanResult; ++i)
+                {
+                    for (byte j = 0; j < WiFiList.size(); ++j)
+                    {
+                        if (WiFi.SSID(i) == WiFiList[j].SSID)
+                        {
+                            if (WiFi.RSSI(i) > bestRSSI)
+                            {
+                                bestWiFi = j;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WiFi.scanDelete();
+
+            if (bestWiFi != 255)
+            {
+                WiFi.begin(WiFiList[bestWiFi].SSID, WiFiList[bestWiFi].PASS);
+                for (byte i = 0; i < 60; ++i)
+                {
+                    if (WiFi.status() == WL_CONNECTED)
+                    {
+                        return 1;
+                    }
+                    delay(500);
+                }
+            }
         }
-        else
-        {
-            ESP.deepSleepMax();
-        }
+
+        WiFiPortal();
     }
 }
 
@@ -192,8 +214,22 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-    STA.addAP("iTongji-manul", "YOUYUAN4411");
-    STA.addAP("DragonRoll", "1234567890");
+    WiFiAdd("iTongji-manul", "YOUYUAN4411");
+    WiFiAdd("DragonRoll", "1234567890");
+}
+
+int WiFiPortal()
+{
+    WM.setConfigPortalTimeout(10);
+    WM.startConfigPortal(MQTTClientid.c_str());
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        return 1;
+    }
+    else
+    {
+        ESP.deepSleepInstant(INT32_MAX);
+    }
 }
 
 void setup()
