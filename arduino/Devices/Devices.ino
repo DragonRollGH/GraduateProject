@@ -6,6 +6,16 @@
 #include <vector>
 #include <WiFiManager.h>
 
+#define D0 16
+#define D1 5
+#define D2 4
+#define D3 0
+#define D4 2
+#define D5 14
+#define D6 12
+#define D7 13
+#define D8 15
+
 const int MQTTPort = 1883;
 const char *MQTTServer = "192.168.1.110";
 const String MQTTClientid = "Devices";
@@ -22,21 +32,21 @@ WiFiClient WLAN;
 WiFiManager WM;
 
 const int CurtainMax = 180;
-const int CurtainPin = 4;
+const int CurtainPin = D1;
 Servo Curtain;
 Ticker CurtainTicker;
 
 const int FanMax = 255;
-const int FanPin = 8;
+const int FanPin = D4;
 
 const int HumidifierMax = 1;
-const int HumidifierPin = 10;
+const int HumidifierPin = D3;
 
 const int LightMax = 16;
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Light(LightMax);
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Light(LightMax);//RX
 
 const int WindowMax = 180;
-const int WindowPin = 5;
+const int WindowPin = D5;
 Servo Window;
 Ticker WindowTicker;
 
@@ -63,6 +73,7 @@ void fan(int value)
     if (0 <= value && value <= FanMax)
     {
         analogWrite(FanPin, value);
+        Serial.println(value);
     }
 }
 
@@ -237,7 +248,13 @@ void setup()
     WiFiInitialize();
     MQTTInitialize();
 
+    Serial.begin(115200);
+    pinMode(CurtainPin, OUTPUT);
+    pinMode(FanPin, OUTPUT);
+    pinMode(HumidifierPin, OUTPUT);
+    pinMode(WindowPin, OUTPUT);
     analogWriteFreq(100);
+    analogWriteRange(FanMax);
     Light.Begin();
 }
 
