@@ -1,4 +1,6 @@
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
+#include <LittleFS.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
 #include <Servo.h>
@@ -18,8 +20,8 @@
 
 const int MQTTPort = 1883;
 const char *MQTTServer = "192.168.1.110";
-const String MQTTClientid = "Devices";
-const String MQTTPub = "devices";
+const char *MQTTClientid = "Devices";
+const char *MQTTPub = "devices";
 const String MQTTSub[] = {
     "curtain",
     "fan",
@@ -115,7 +117,7 @@ void MQTTConnect()
     for (byte i = 0; i < 120; ++i)
     {
         WiFiConnect();
-        if (MQTT.connect((MQTTClientid + millis()).c_str()))
+        if (MQTT.connect((String(MQTTClientid) + millis()).c_str()))
         {
             break;
         }
@@ -173,6 +175,64 @@ void WiFiAdd(String SSID, String PASS)
     WiFiList.push_back(WiFiEntry{SSID, PASS});
 }
 
+void WiFiConfigRead()
+{
+    LittleFS.begin();
+    if (LittleFS.exists("/WiFi.json"))
+    {
+        File WiFiConfig = LittleFS.open("/WiFi.json", "r");
+        StaticJsonDocument<512> doc;
+        deserializeJson(doc, WiFiConfig);
+        for (byte i = 0; i < doc["len"]; ++i)
+        {
+            WiFiAdd(doc["ssid"][i], doc["pass"][i]);
+        }
+        WiFiConfig.close();
+    }
+    else
+    {
+        File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+        WiFiConfig.close();
+    }
+    readFile("/WiFi.json");
+    LittleFS.end();
+}
+
+void WiFiConfigWrite(String SSID, String PASS)
+{
+    LittleFS.begin();
+    File WiFiConfig = LittleFS.open("/WiFi.json", "r");
+    StaticJsonDocument<512> doc;
+    deserializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    byte len = doc["len"];
+    ++len;
+    doc["len"] = len;
+    doc["ssid"].add(SSID);
+    doc["pass"].add(PASS);
+    File WiFiConfigNew = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfigNew);
+    WiFiConfigNew.close();
+    readFile("/WiFi.json");
+    LittleFS.end();
+}
+
+void readFile(const char * path) {
+  Serial.printf("Reading file: %s\n", path);
+
+  File file = LittleFS.open(path, "r");
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  Serial.print("Read from file: ");
+  while (file.available()) {
+    Serial.write(file.read());
+  }
+  file.close();
+}
+
 int WiFiConnect()
 {
     if (WiFi.status() != WL_CONNECTED)
@@ -225,6 +285,7 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+
     WiFiAdd("iTongji-manul", "YOUYUAN4411");
     WiFiAdd("DragonRoll", "1234567890");
 }
@@ -232,7 +293,7 @@ void WiFiInitialize()
 int WiFiPortal()
 {
     WM.setConfigPortalTimeout(10);
-    WM.startConfigPortal(MQTTClientid.c_str());
+    WM.startConfigPortal(MQTTClientid);
     if (WiFi.status() == WL_CONNECTED)
     {
         return 1;
@@ -242,6 +303,7 @@ int WiFiPortal()
         ESP.deepSleepInstant(INT32_MAX);
     }
 }
+
 
 void setup()
 {
@@ -256,6 +318,10 @@ void setup()
     analogWriteFreq(100);
     analogWriteRange(FanMax);
     Light.Begin();
+
+    Serial.begin(115200);
+    WiFiConfigRead();
+    WiFiConfigWrite("123","456");
 }
 
 void loop()
