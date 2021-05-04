@@ -1,5 +1,7 @@
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266httpUpdate.h>
+#include <ESP8266HTTPClient.h>
 #include <LittleFS.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
@@ -33,13 +35,13 @@ MQTTClient MQTT;
 WiFiClient WLAN;
 WiFiManager WM;
 
-const int CurtainMax = 180;
+const int CurtainMax = 180; //35-130
 const int CurtainPin = D1;
 Servo Curtain;
 Ticker CurtainTicker;
 
 const int FanMax = 255;
-const int FanPin = D4;
+const int FanPin = D2;
 
 const int HumidifierMax = 1;
 const int HumidifierPin = D3;
@@ -57,6 +59,21 @@ struct WiFiEntry {
     String PASS;
 };
 std::vector<WiFiEntry> WiFiList;
+
+void cmdUpdate(String &paylaod)
+{
+    String url = "http://www.dr21.fun/DragonRollGH/Pulser/main/arduino/Pulser/Pulser.ino.generic.bin";
+    if (paylaod.length() > 2)
+    {
+        url = paylaod.substring(2);
+    }
+    MQTT.publish(MQTTPub, "Starting update from " + url);
+
+    ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
+    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub, "[httpUpdate] Started"); });
+    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
+    ESPhttpUpdate.update(url);
+}
 
 void curtain(int value)
 {
@@ -154,6 +171,7 @@ void MQTTMsg(String &topic, String &payload)
     else if (topic == "fan")
     {
         fan(payload.toInt());
+        // cmdUpdate(payload);
     }
     else if (topic == "humidifier")
     {
@@ -166,8 +184,8 @@ void MQTTMsg(String &topic, String &payload)
     else if (topic == "window")
     {
         window(payload.toInt());
+        // WiFiConfigNew();
     }
-
 }
 
 void WiFiAdd(String SSID, String PASS)
@@ -175,13 +193,24 @@ void WiFiAdd(String SSID, String PASS)
     WiFiList.push_back(WiFiEntry{SSID, PASS});
 }
 
+void WiFiConfigNew()
+{
+    LittleFS.begin();
+    StaticJsonDocument<128> doc;
+    doc["len"] = 0;
+    File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    LittleFS.end();
+}
+
 void WiFiConfigRead()
 {
     LittleFS.begin();
     if (LittleFS.exists("/WiFi.json"))
     {
-        File WiFiConfig = LittleFS.open("/WiFi.json", "r");
         StaticJsonDocument<512> doc;
+        File WiFiConfig = LittleFS.open("/WiFi.json", "r");
         deserializeJson(doc, WiFiConfig);
         for (byte i = 0; i < doc["len"]; ++i)
         {
@@ -191,10 +220,12 @@ void WiFiConfigRead()
     }
     else
     {
+        StaticJsonDocument<128> doc;
+        doc["len"] = 0;
         File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+        serializeJson(doc, WiFiConfig);
         WiFiConfig.close();
     }
-    readFile("/WiFi.json");
     LittleFS.end();
 }
 
@@ -206,31 +237,29 @@ void WiFiConfigWrite(String SSID, String PASS)
     deserializeJson(doc, WiFiConfig);
     WiFiConfig.close();
     byte len = doc["len"];
-    ++len;
-    doc["len"] = len;
-    doc["ssid"].add(SSID);
-    doc["pass"].add(PASS);
-    File WiFiConfigNew = LittleFS.open("/WiFi.json", "w");
-    serializeJson(doc, WiFiConfigNew);
-    WiFiConfigNew.close();
-    readFile("/WiFi.json");
+    bool exist = 0;
+    for (byte i = 0; i < len; ++i)
+    {
+        if (doc["ssid"][i] == SSID)
+        {
+            exist = 1;
+            if (doc["pass"][i] != PASS)
+            {
+                doc["pass"][i] = PASS;
+            }
+        }
+    }
+    if (!exist)
+    {
+        ++len;
+        doc["len"] = len;
+        doc["ssid"].add(SSID);
+        doc["pass"].add(PASS);
+    }
+    WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
     LittleFS.end();
-}
-
-void readFile(const char * path) {
-  Serial.printf("Reading file: %s\n", path);
-
-  File file = LittleFS.open(path, "r");
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    return;
-  }
-
-  Serial.print("Read from file: ");
-  while (file.available()) {
-    Serial.write(file.read());
-  }
-  file.close();
 }
 
 int WiFiConnect()
@@ -285,17 +314,17 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-
-    WiFiAdd("iTongji-manul", "YOUYUAN4411");
-    WiFiAdd("DragonRoll", "1234567890");
+    WiFiConfigRead();
 }
 
 int WiFiPortal()
 {
-    WM.setConfigPortalTimeout(10);
+    WM.setConfigPortalTimeout(180);
     WM.startConfigPortal(MQTTClientid);
     if (WiFi.status() == WL_CONNECTED)
     {
+        WiFiConfigWrite(WM.getWiFiSSID(), WM.getWiFiPass());
+        WiFiAdd(WM.getWiFiSSID(), WM.getWiFiPass());
         return 1;
     }
     else
@@ -304,9 +333,11 @@ int WiFiPortal()
     }
 }
 
-
 void setup()
 {
+    Serial.begin(115200);
+    Serial.println("");
+    Serial.println("ESP OK");
     WiFiInitialize();
     MQTTInitialize();
 
@@ -318,10 +349,6 @@ void setup()
     analogWriteFreq(100);
     analogWriteRange(FanMax);
     Light.Begin();
-
-    Serial.begin(115200);
-    WiFiConfigRead();
-    WiFiConfigWrite("123","456");
 }
 
 void loop()
