@@ -25,31 +25,37 @@ const char *MQTTServer = "192.168.1.110";
 const char *MQTTClientid = "Devices";
 const char *MQTTPub = "devices";
 const String MQTTSub[] = {
+    "devices",
     "curtain",
     "fan",
     "humidifier",
     "light",
     "window"
 };
+const int MQTTSubLen = 6;
 MQTTClient MQTT;
 WiFiClient WLAN;
 WiFiManager WM;
 
-const int CurtainMax = 180; //35-130
+const int CurtainMax = 100;
+const int CurtainAngleMin = 35;
+const int CurtainAngleMax = 130;
 const int CurtainPin = D1;
 Servo Curtain;
 Ticker CurtainTicker;
 
-const int FanMax = 255;
+const int FanMax = 1;
 const int FanPin = D2;
 
 const int HumidifierMax = 1;
 const int HumidifierPin = D3;
 
 const int LightMax = 16;
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Light(LightMax);//RX
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Light(LightMax); //RX
 
-const int WindowMax = 180;
+const int WindowMax = 100;
+const int WindowAngleMin = 35;
+const int WindowAngleMax = 130;
 const int WindowPin = D5;
 Servo Window;
 Ticker WindowTicker;
@@ -60,73 +66,49 @@ struct WiFiEntry {
 };
 std::vector<WiFiEntry> WiFiList;
 
-void cmdUpdate(String &paylaod)
-{
-    String url = "http://www.dr21.fun/DragonRollGH/Pulser/main/arduino/Pulser/Pulser.ino.generic.bin";
-    if (paylaod.length() > 2)
-    {
-        url = paylaod.substring(2);
-    }
-    MQTT.publish(MQTTPub, "Starting update from " + url);
-
-    ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
-    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub, "[httpUpdate] Started"); });
-    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
-    ESPhttpUpdate.update(url);
-}
-
 void curtain(int value)
 {
-    if (0 <= value && value <= CurtainMax)
-    {
-        Curtain.attach(CurtainPin);
-        Curtain.write(value);
-        CurtainTicker.once_ms(500, []() {
-            Curtain.detach();
-        });
-    }
+    value = constrain(value, 0, CurtainMax);
+    value = map(value, 0, CurtainMax, CurtainAngleMin, CurtainAngleMax);
+    Curtain.attach(CurtainPin);
+    Curtain.write(value);
+    CurtainTicker.once_ms(1000, []() {
+        Curtain.detach();
+    });
 }
 
 void fan(int value)
 {
-    if (0 <= value && value <= FanMax)
-    {
-        analogWrite(FanPin, value);
-        Serial.println(value);
-    }
+    value = constrain(value, 0, FanMax);
+    digitalWrite(FanPin, value);
 }
 
 void humidifier(int value)
 {
-    if (0 <= value && value <= HumidifierMax)
-    {
-        digitalWrite(HumidifierPin, value);
-    }
+    value = constrain(value, 0, HumidifierMax);
+    digitalWrite(HumidifierPin, value);
 }
 
 void light(int value)
 {
-    if (0 <= value && value <= LightMax)
+    value = constrain(value, 0, LightMax);
+    Light.ClearTo(RgbColor(0, 0, 0));
+    for (byte i = 0; i < value; i++)
     {
-        Light.ClearTo(RgbColor(0, 0, 0));
-        for (byte i = 0; i < value; i++)
-        {
-            Light.SetPixelColor(i, RgbColor(10, 10, 10));
-        }
-        Light.Show();
+        Light.SetPixelColor(i, RgbColor(10, 10, 10));
     }
+    Light.Show();
 }
 
 void window(int value)
 {
-    if (0 <= value && value <= WindowMax)
-    {
-        Window.attach(WindowPin);
-        Window.write(value);
-        WindowTicker.once_ms(500, []() {
-            Window.detach();
-        });
-    }
+    value = constrain(value, 0, WindowMax);
+    value = map(value, 0, WindowMax, WindowAngleMin, WindowAngleMax);
+    Window.attach(WindowPin);
+    Window.write(value);
+    WindowTicker.once_ms(1000, []() {
+        Window.detach();
+    });
 }
 
 void MQTTConnect()
@@ -140,7 +122,7 @@ void MQTTConnect()
         }
         delay(500);
     }
-    for (byte i = 0; i < 5; ++i)
+    for (byte i = 0; i < MQTTSubLen; ++i)
     {
         MQTT.subscribe(MQTTSub[i]);
         delay(10);
@@ -164,14 +146,19 @@ void MQTTLoop()
 
 void MQTTMsg(String &topic, String &payload)
 {
-    if (topic == "curtain")
+    if (topic == MQTTSub[0] && payload[0] == 'N')
+    {
+        LittleFS.begin();
+        WiFiConfigNew();
+        LittleFS.end();
+    }
+    else if (topic == "curtain")
     {
         curtain(payload.toInt());
     }
     else if (topic == "fan")
     {
         fan(payload.toInt());
-        // cmdUpdate(payload);
     }
     else if (topic == "humidifier")
     {
@@ -184,7 +171,6 @@ void MQTTMsg(String &topic, String &payload)
     else if (topic == "window")
     {
         window(payload.toInt());
-        // WiFiConfigNew();
     }
 }
 
@@ -195,13 +181,11 @@ void WiFiAdd(String SSID, String PASS)
 
 void WiFiConfigNew()
 {
-    LittleFS.begin();
     StaticJsonDocument<128> doc;
     doc["len"] = 0;
     File WiFiConfig = LittleFS.open("/WiFi.json", "w");
     serializeJson(doc, WiFiConfig);
     WiFiConfig.close();
-    LittleFS.end();
 }
 
 void WiFiConfigRead()
@@ -220,11 +204,7 @@ void WiFiConfigRead()
     }
     else
     {
-        StaticJsonDocument<128> doc;
-        doc["len"] = 0;
-        File WiFiConfig = LittleFS.open("/WiFi.json", "w");
-        serializeJson(doc, WiFiConfig);
-        WiFiConfig.close();
+        WiFiConfigNew();
     }
     LittleFS.end();
 }
@@ -337,18 +317,16 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("");
-    Serial.println("ESP OK");
     WiFiInitialize();
     MQTTInitialize();
 
-    Serial.begin(115200);
     pinMode(CurtainPin, OUTPUT);
     pinMode(FanPin, OUTPUT);
     pinMode(HumidifierPin, OUTPUT);
     pinMode(WindowPin, OUTPUT);
-    analogWriteFreq(100);
-    analogWriteRange(FanMax);
     Light.Begin();
+
+    Serial.println("ESP OK");
 }
 
 void loop()

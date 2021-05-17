@@ -7,10 +7,8 @@ from threading import Timer
 import paho.mqtt.client as MQTT
 
 
-def limit(value, MAX, MIN=0):
-    value = MIN if value < MIN else value
-    value = MAX if value > MAX else value
-    return value
+def constrain(val, min_val, max_val):
+    return min(max_val, max(min_val, val))
 
 
 class IoT:
@@ -167,7 +165,7 @@ class Device:
                 offset = (self.maxValue - self.value) * self.offsetValue
             elif self.offsetValue < 0:
                 offset = self.value * self.offsetValue
-            self.outputValue = int(limit(self.value + offset, self.maxValue))
+            self.outputValue = int(constrain(self.value + offset, self.maxValue))
 
     def publish(self):
         self.update()
@@ -184,7 +182,7 @@ class Device:
         self.publish()
 
     def sensor(self, name, value):
-        value = limit(value, self.sensorMax, self.sensorMin)
+        value = constrain(value, self.sensorMax, self.sensorMin)
         self.value = round((value - self.sensorMin) * self.MAX / (self.sensorMax - self.sensorMin))
         self.publish()
 

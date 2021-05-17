@@ -1,5 +1,10 @@
+#include <ArduinoJson.h>
+#include <BH1750.h>
 #include <DHT.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266httpUpdate.h>
+#include <ESP8266HTTPClient.h>
+#include <LittleFS.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
 #include <Servo.h>
@@ -7,16 +12,43 @@
 #include <vector>
 #include <WiFiManager.h>
 
+#define D0 16
+#define D1 5
+#define D2 4
+#define D3 0
+#define D4 2
+#define D5 14
+#define D6 12
+#define D7 13
+#define D8 15
+
 const int MQTTPort = 1883;
 const char *MQTTServer = "192.168.1.110";
-const String MQTTClientid = "Sensors";
-
-
+const char *MQTTClientid = "Sensors";
+const String MQTTPub[] = {
+    "sensors",
+    "humidity",
+    "temperature",
+    "bright"
+};
+const String MQTTSub[] = {
+    "sensors",
+    "pixel"
+};
+const int MQTTSubLen = 2;
 MQTTClient MQTT;
 WiFiClient WLAN;
 WiFiManager WM;
 
-DHT Dht;
+const int DHT11Pin = D1;
+DHT DHT11;
+
+const int SCL = D4;
+const int SDA = D3;
+BH1750 Bright;
+
+const int LightMax = 24;
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Light(LightMax); //RX
 
 struct WiFiEntry {
     String SSID;
@@ -24,10 +56,15 @@ struct WiFiEntry {
 };
 std::vector<WiFiEntry> WiFiList;
 
-void DhtLoop()
+void light(int value)
 {
-  MQTT.publish("humidity", String(Dht.getHumidity()));
-  MQTT.publish("temperature", String(Dht.getTemperature()));
+    value = constrain(value, 0, LightMax);
+    Light.ClearTo(RgbColor(0, 0, 0));
+    for (byte i = 0; i < value; i++)
+    {
+        Light.SetPixelColor(i, RgbColor(10, 10, 10));
+    }
+    Light.Show();
 }
 
 void MQTTConnect()
@@ -35,17 +72,23 @@ void MQTTConnect()
     for (byte i = 0; i < 120; ++i)
     {
         WiFiConnect();
-        if (MQTT.connect((MQTTClientid + millis()).c_str()))
+        if (MQTT.connect((String(MQTTClientid) + millis()).c_str()))
         {
             break;
         }
         delay(500);
+    }
+    for (byte i = 0; i < MQTTSubLen; ++i)
+    {
+        MQTT.subscribe(MQTTSub[i]);
+        delay(10);
     }
 }
 
 void MQTTInitialize()
 {
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
+    MQTT.onMessage(MQTTMsg);
 }
 
 void MQTTLoop()
@@ -57,9 +100,102 @@ void MQTTLoop()
     MQTT.loop();
 }
 
+void MQTTMsg(String &topic, String &payload)
+{
+    if (topic == MQTTSub[0] && payload[0] == 'N')
+    {
+        LittleFS.begin();
+        WiFiConfigNew();
+        LittleFS.end();
+    }
+    else if (topic == "curtain")
+    {
+        curtain(payload.toInt());
+    }
+    else if (topic == "fan")
+    {
+        fan(payload.toInt());
+    }
+    else if (topic == "humidifier")
+    {
+        humidifier(payload.toInt());
+    }
+    else if (topic == "light")
+    {
+        light(payload.toInt());
+    }
+    else if (topic == "window")
+    {
+        window(payload.toInt());
+    }
+}
+
 void WiFiAdd(String SSID, String PASS)
 {
     WiFiList.push_back(WiFiEntry{SSID, PASS});
+}
+
+void WiFiConfigNew()
+{
+    StaticJsonDocument<128> doc;
+    doc["len"] = 0;
+    File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+}
+
+void WiFiConfigRead()
+{
+    LittleFS.begin();
+    if (LittleFS.exists("/WiFi.json"))
+    {
+        StaticJsonDocument<512> doc;
+        File WiFiConfig = LittleFS.open("/WiFi.json", "r");
+        deserializeJson(doc, WiFiConfig);
+        for (byte i = 0; i < doc["len"]; ++i)
+        {
+            WiFiAdd(doc["ssid"][i], doc["pass"][i]);
+        }
+        WiFiConfig.close();
+    }
+    else
+    {
+        WiFiConfigNew();
+    }
+    LittleFS.end();
+}
+
+void WiFiConfigWrite(String SSID, String PASS)
+{
+    LittleFS.begin();
+    File WiFiConfig = LittleFS.open("/WiFi.json", "r");
+    StaticJsonDocument<512> doc;
+    deserializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    byte len = doc["len"];
+    bool exist = 0;
+    for (byte i = 0; i < len; ++i)
+    {
+        if (doc["ssid"][i] == SSID)
+        {
+            exist = 1;
+            if (doc["pass"][i] != PASS)
+            {
+                doc["pass"][i] = PASS;
+            }
+        }
+    }
+    if (!exist)
+    {
+        ++len;
+        doc["len"] = len;
+        doc["ssid"].add(SSID);
+        doc["pass"].add(PASS);
+    }
+    WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    LittleFS.end();
 }
 
 int WiFiConnect()
@@ -114,16 +250,17 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-    WiFiAdd("iTongji-manul", "YOUYUAN4411");
-    WiFiAdd("DragonRoll", "1234567890");
+    WiFiConfigRead();
 }
 
 int WiFiPortal()
 {
-    WM.setConfigPortalTimeout(10);
-    WM.startConfigPortal(MQTTClientid.c_str());
+    WM.setConfigPortalTimeout(180);
+    WM.startConfigPortal(MQTTClientid);
     if (WiFi.status() == WL_CONNECTED)
     {
+        WiFiConfigWrite(WM.getWiFiSSID(), WM.getWiFiPass());
+        WiFiAdd(WM.getWiFiSSID(), WM.getWiFiPass());
         return 1;
     }
     else
@@ -134,10 +271,14 @@ int WiFiPortal()
 
 void setup()
 {
+    Serial.begin(115200);
+    Serial.println("");
     WiFiInitialize();
     MQTTInitialize();
 
-    Dht.setup(2);
+    Light.Begin();
+
+    Serial.println("ESP OK");
 }
 
 void loop()
