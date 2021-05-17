@@ -19,17 +19,15 @@
 #define D4 2
 #define D5 14
 #define D6 12
-#define D7 13
-#define D8 15
 
 const int MQTTPort = 1883;
 const char *MQTTServer = "192.168.1.110";
 const char *MQTTClientid = "Sensors";
 const String MQTTPub[] = {
     "sensors",
+    "bright",
     "humidity",
-    "temperature",
-    "bright"
+    "temperature"
 };
 const String MQTTSub[] = {
     "sensors",
@@ -40,12 +38,16 @@ MQTTClient MQTT;
 WiFiClient WLAN;
 WiFiManager WM;
 
-const int DHT11Pin = D1;
+Ticker sensorTicker;
+bool sensorFlag = 0;
+
+const int sda = D1;
+const int scl = D2;
+BH1750 Bright;
+
+const int DHT11Pin = D6;
 DHT DHT11;
 
-const int SCL = D4;
-const int SDA = D3;
-BH1750 Bright;
 
 const int LightMax = 24;
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Light(LightMax); //RX
@@ -55,6 +57,24 @@ struct WiFiEntry {
     String PASS;
 };
 std::vector<WiFiEntry> WiFiList;
+
+void SensorInitialize()
+{
+    Wire.begin(sda, scl);
+    DHT11.setup(DHT11Pin);
+}
+
+void sensorLoop()
+{
+    if (sensorFlag)
+    {
+        sensorFlag = 0;
+        Bright.begin(BH1750::ONE_TIME_LOW_RES_MODE);
+        MQTT.publish(MQTTPub[2],String(int(DHT11.getHumidity())));
+        MQTT.publish(MQTTPub[3],String(int(DHT11.getTemperature())));
+        MQTT.publish(MQTTPub[1],String(int(Bright.readLightLevel())));
+    }
+}
 
 void light(int value)
 {
@@ -108,26 +128,26 @@ void MQTTMsg(String &topic, String &payload)
         WiFiConfigNew();
         LittleFS.end();
     }
-    else if (topic == "curtain")
-    {
-        curtain(payload.toInt());
-    }
-    else if (topic == "fan")
-    {
-        fan(payload.toInt());
-    }
-    else if (topic == "humidifier")
-    {
-        humidifier(payload.toInt());
-    }
-    else if (topic == "light")
-    {
-        light(payload.toInt());
-    }
-    else if (topic == "window")
-    {
-        window(payload.toInt());
-    }
+    // else if (topic == "curtain")
+    // {
+    //     curtain(payload.toInt());
+    // }
+    // else if (topic == "fan")
+    // {
+    //     fan(payload.toInt());
+    // }
+    // else if (topic == "humidifier")
+    // {
+    //     humidifier(payload.toInt());
+    // }
+    // else if (topic == "light")
+    // {
+    //     light(payload.toInt());
+    // }
+    // else if (topic == "window")
+    // {
+    //     window(payload.toInt());
+    // }
 }
 
 void WiFiAdd(String SSID, String PASS)
@@ -275,8 +295,10 @@ void setup()
     Serial.println("");
     WiFiInitialize();
     MQTTInitialize();
+    SensorInitialize();
 
-    Light.Begin();
+    // Light.Begin();
+    sensorTicker.attach(5, []() {sensorFlag = 1;});
 
     Serial.println("ESP OK");
 }
@@ -284,6 +306,7 @@ void setup()
 void loop()
 {
     MQTTLoop();
+    sensorLoop();
 
     delay(100);
 }
