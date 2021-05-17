@@ -17,8 +17,6 @@
 #define D4 2
 #define D5 14
 #define D6 12
-#define D7 13
-#define D8 15
 
 const int MQTTPort = 1883;
 const char *MQTTServer = "192.168.1.110";
